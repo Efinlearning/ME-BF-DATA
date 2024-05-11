@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vxe-table/lib/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+    <title>ME BF DATA</title>
+    
+    <style>
+        tr.atm {
+            background-color: #fffcad !important;
+        }
+        th.even{
+          background-color: #e9f9ff;
+        }
+
+        th.odd{
+          background-color: #ffffe9;
+        }
+
+        td.even{
+          background-color: #e9f9ff;
+        }
+
+        td.odd{
+          background-color: #ffffe9;
+        }
+        .NOP{
+          color: #cfcfcf;
+        }
+        .OK{
+          color: #001d80;
+        }
+        .vxe-table--render-default .vxe-cell{
+            padding-left :5px;
+            padding-right :5px;
+        }
+        .flex {
+          display: flex;
+        }
+        .flex-item {
+          width: 50%;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+
+    <vxe-select v-model="commonColumns.expiryDate">
+        <vxe-option 
+            v-for="num in expiryDateOptions" 
+            :key="num" :value="num" :label="num"
+            ></vxe-option>
+    </vxe-select>
+    
+    {{ lastFetched }}
+
+    <div align="center">
+        <div style="font-weight: bold;">
+            <vxe-radio-group v-model="commonColumns.multi_expiry_ratio" size="mini">
+                <vxe-radio-button label="1.25" content="1.25 (4:5)"></vxe-radio-button>
+                <vxe-radio-button label="1.33" content="1.33 (3:4)"></vxe-radio-button>
+                <vxe-radio-button label="1.50" content="1.50 (2:3)"></vxe-radio-button>
+                <vxe-radio-button label="2.00" content="2.00 (1:2)"></vxe-radio-button>
+                <vxe-radio-button label="1111" content="LC (1111) 2XBF"></vxe-radio-button>
+                <vxe-radio-button label="11011" content="LC (11011) 3XBF"></vxe-radio-button>
+                <vxe-radio-button label="132" content="RBR (132)"></vxe-radio-button>
+            </vxe-radio-group>
+        </div>
+    </div>   
+
+     <vxe-modal v-model="showLegs" esc-closable :show-header="false" width="500px" :position="{top:'0%'}">
+        <template #default>
+            <h3><i>{{ chosenBFTitle }}</i> </h6>
+            <strong>
+                <small v-for="(value, propertyName) in chosenBF">
+                    {{ propertyName }} : {{ value }}
+                </small>
+            </strong> 
+          </ol>
+        </template>
+      </vxe-modal>
+
+     <div class="flex">
+      <div class="flex-item">
+
+        <vxe-table
+              size="mini"
+              highlight-hover-row
+              :row-class-name="rowClassName"
+              @cell-dblclick="cellDBLClickEvent"
+              border
+              width
+              height=800
+              :data="ocCERecordsInterested">
+
+              <vxe-column  width=50 field="strikePrice" title="STRK" fixed="left" ></vxe-column>
+
+              <vxe-column  width=65  title="B/A" fixed="left" >
+                <template v-slot="scope">
+                    <small>{{ scope.row.CE.bidprice_frmtd }}/{{ scope.row.CE.askPrice_frmtd }}</small>
+                </template>
+              </vxe-column>
+              
+              <vxe-colgroup title="CE ME" class-name="even" align="center" header-class-name="even">
+
+                <vxe-column v-for="gap in gapsArr" :key="gap" 
+                    width=60 :field="`CE_MEBF.G${gap}`" :title="'G'+gap" 
+                    class-name="even" header-class-name="even">    
+                    <template v-slot="scope">
+                        <span 
+                            :title="scope.row.CE_MEBF['G'+gap+'FLP']" 
+                            :class="[!scope.row.CE_MEBF['G'+gap+'FLPIsOptimal'] ? 'NOP' : 'OK']"
+                        >{{scope.row.CE_MEBF['G'+gap]}}</span>
+                    </template>
+                </vxe-column>
+                
+              </vxe-colgroup>
+             
+    </vxe-table>
+</div>
+
+<div class="flex-item">
+
+   <vxe-table
+          size="mini"
+          highlight-hover-row
+          :row-class-name="rowClassName"
+          @cell-dblclick="cellDBLClickEvent"
+          border
+          width
+          height=800
+          :data="ocPERecordsInterested">
+
+          <vxe-column width=50 field="strikePrice" title="STRK" fixed="left" ></vxe-column>
+          <vxe-column width=65 title="B/A" fixed="left" >
+            <template v-slot="scope">
+                <small>{{ scope.row.PE.bidprice_frmtd }}/{{ scope.row.PE.askPrice_frmtd }}</small>
+            </template>
+          </vxe-column>
+
+        <vxe-colgroup title="PE ME" class-name="odd" align="center" header-class-name="odd">
+
+            <vxe-column v-for="gap in gapsArr" :key="gap" 
+                width=60 :field="`PE_MEBF.G${gap}`" :title="'G'+gap" 
+                class-name="odd" header-class-name="odd">    
+                <template v-slot="scope">
+                    <span 
+                        :title="scope.row.PE_MEBF['G'+gap+'FLP']" 
+                        :class="[!scope.row.PE_MEBF['G'+gap+'FLPIsOptimal'] ? 'NOP' : 'OK']"
+                    >{{scope.row.PE_MEBF['G'+gap]}}</span>
+                </template>
+            </vxe-column>
+            
+          </vxe-colgroup>
+  
+    </vxe-table> 
+</div>
+
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>
+<script src="https://cdn.jsdelivr.net/npm/xe-utils"></script>
+<script src="https://cdn.jsdelivr.net/npm/vxe-table@2"></script>
+
+<script>
+
+    Vue.use(VXETable)
+    new Vue({
+        el: '#app',
+        data(){
+            return {
+                ocData: '',
+                underlyingValue:'',
+                ocLastFetched:'',
+                expiryDateOptions:[],
+                showLegs:false,
+                chosenBF:{},
+                chosenBFTitle:null,
+                commonColumns:{
+                    expiryDate : '',
+                    multi_expiry_ratio:'2.00',
+                }
+            }
+        },
+        mounted: function(){
+
+            // storage for common columns
+            if (localStorage.getItem(this.commonColumnsKey)) {
+                Object.assign(this.commonColumns, JSON.parse(localStorage.getItem(this.commonColumnsKey)));
+                
+            }
+        },
+        watch: {
+            commonColumns: {
+            handler() {
+              localStorage.setItem( this.commonColumnsKey,JSON.stringify(this.commonColumns));
+            },
+            deep: true
+          }
+        },
+        computed: {
+
+            gapsArr(){
+
+                return [50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 
+                    // 550, 600, 650, 700, 750, 800, 850, 900, 950, 1000
+                ];
+            },
+            ratios(){
+
+                return {
+                    '2' : 1,
+                    '1.5' : 2,
+                    '1.33' : 3,
+                    '1.25' : 4
+                }
+            },
+
+            commonColumnsKey: function(){
+                return `common_columns`;
+            },
+
+            chosenRatio(){
+
+                return Number(this.commonColumns.multi_expiry_ratio);
+            },
+
+            lastFetched(){
+
+                return [this.ocLastFetched, 'SPOT ' + this.underlyingValue, 'STRADDLE '+ this.straddleRate].join(', ');
+            },
+
+            allExpiryOCData(){
+
+                if(!this.ocData) { return; }
+
+                return this.ocData.records.data.filter(c => {
+
+                    return (c.strikePrice <= 2000 + (parseInt(this.underlyingValue / 100) * 100)) &&
+                            (c.strikePrice >= (parseInt(this.underlyingValue / 100) * 100) - 2000)
+                });
+
+            },
+
+            ocDataInterested(){
+
+                if(!this.ocData) { return; }
+
+                let option_chain = this.allExpiryOCData.filter(c => c.expiryDate == this.commonColumns.expiryDate);
+
+                return JSON.parse(JSON.stringify(option_chain));
+            },
+
+            straddleRate(){
+
+                let ATMStrike = this.ocHedgeData.find(s=>s.isATM);
+                return ATMStrike ? (ATMStrike.CE.lastPrice + ATMStrike.PE.lastPrice).toFixed(2) : 0;
+            },
+
+            ocATM(){
+
+                return this.underlyingValue + (50 - (this.underlyingValue % 50 ? this.underlyingValue % 50 : 50))
+            },
+
+            ocCERecordsInterested(){
+
+                return this.ocHedgeData.filter(strike=> {
+                    return strike.strikePrice >= this.ocATM - 50 * 4;
+                });
+            },
+
+            ocPERecordsInterested(){
+
+                return this.ocHedgeData.filter(strike=> {
+                    return strike.strikePrice <= this.ocATM + 50 * 4;
+                }).sort((a,b)=> {
+                    return a.strikePrice < b.strikePrice ? 1 : -1
+                })
+            },
+
+            ocHedgeData(){
+
+                return (this.ocDataInterested || []) .map(strike => {
+
+                    strike.isATM = this.ocATM == strike.strikePrice;
+
+                    if(!('PE' in strike)){
+                        strike.PE = { bidprice : 0, askPrice : 0}
+                    }
+
+                    if(!('CE' in strike)){
+                        strike.CE = { bidprice : 0, askPrice : 0}
+                    }
+
+                    strike.CE.bidprice_frmtd = String(strike.CE.bidprice).split('.')[0];
+                    strike.CE.askPrice_frmtd = String(strike.CE.askPrice).split('.')[0];
+
+                    strike.PE.bidprice_frmtd = String(strike.PE.bidprice).split('.')[0];
+                    strike.PE.askPrice_frmtd = String(strike.PE.askPrice).split('.')[0];
+
+
+                    strike.CE_MEBF = {};
+                    strike.PE_MEBF = {};
+                    
+                    
+                    let CEgapRate, PEgapRate;
+                    // [50, 100, 150, 200, 300,400,500,600,700,800,900].forEach(gap => {
+                    this.gapsArr.forEach(gap => {
+
+                        // MULTI EXPIRY CE
+                        if(this.chosenRatio == '1111'){
+                            CEgapRate = this.calcLCMEBFRate(strike.strikePrice, gap, 'CE')    
+                        }else if(this.chosenRatio == '11011'){
+                            CEgapRate = this.calcLC3XMEBFRate(strike.strikePrice, gap, 'CE')    
+                        }else if(this.chosenRatio == '132'){
+                            CEgapRate = this.calcRBRMEBFRate(strike.strikePrice, gap, 'CE')    
+                        }else{
+                            CEgapRate = this.calcMEBFRate(strike.strikePrice, gap, 'CE')
+                        }
+                        
+                        strike.CE_MEBF[`G${gap}`] = CEgapRate;
+                        strike.CE_MEBF[`G${gap}FLP`]= Number((CEgapRate / strike.CE.askPrice) * 100).toFixed(2);
+                        strike.CE_MEBF[`G${gap}FLPIsOptimal`]= strike.strikePrice > this.ocATM-50 && this.isOptimalFLP(strike.CE_MEBF[`G${gap}FLP`], strike.CE);
+
+                        // MULTI EXPIRY PE
+
+                        if(this.chosenRatio == '1111'){
+                            PEgapRate = this.calcLCMEBFRate(strike.strikePrice, gap, 'PE')
+                        }else if(this.chosenRatio == '11011'){
+                            PEgapRate = this.calcLC3XMEBFRate(strike.strikePrice, gap, 'PE')
+                        }else if(this.chosenRatio == '132'){
+                            PEgapRate = this.calcRBRMEBFRate(strike.strikePrice, gap, 'PE')    
+                        }else{
+                            PEgapRate = this.calcMEBFRate(strike.strikePrice, gap, 'PE')
+                        }
+                        strike.PE_MEBF[`G${gap}`] = PEgapRate;
+                        strike.PE_MEBF[`G${gap}FLP`]= Number((PEgapRate / strike.PE.askPrice) * 100).toFixed(2);
+                        strike.PE_MEBF[`G${gap}FLPIsOptimal`]= strike.strikePrice < this.ocATM+50 && this.isOptimalFLP(strike.PE_MEBF[`G${gap}FLP`], strike.PE);
+
+                    });
+
+                    return strike;
+                })
+            },
+        },
+
+        methods:{
+
+            formatDate(value, broker = 'upstox'){
+
+                let date = new Date(value);
+                const day = date.toLocaleString('default', { day: '2-digit' });
+                let month = date.toLocaleString('default', { month: 'numeric' });
+                const year = date.toLocaleString('default', { year: '2-digit' });
+                
+                if(broker == 'upstox'){
+                    month = date.toLocaleString('default', { month: 'short' }); // 22AUG
+                    return [day, month, year ].join('');
+                }
+
+                if(expiryMnths.includes(value)){
+                    month = date.toLocaleString('default', { month: 'short' }); // 22AUG
+                    return [year, month].join('');    
+                }
+                
+                return [year, month, day].join(''); // 22811
+            },
+
+            morphWitPrices(tbl, CEPE){
+
+                for(let leg in tbl){ 
+                    
+                    let legSplits = leg.split(' ');                            
+                    let legstrk = legSplits[2];
+                    let expiryDate = legSplits[3];
+                    let optionChain = JSON.parse(localStorage.getItem('ocData'));
+                    let strkOption = optionChain.find(d => {
+                        return d.expiryDate == expiryDate && d.strikePrice == legstrk;
+                    });
+                    
+                    if(strkOption){
+
+                        tbl[leg] = tbl[leg] + ` @ ` + (leg.includes('BUY') ? 
+                    `${strkOption[CEPE].askPrice}` : `${strkOption[CEPE].bidprice}`);    
+                    }
+                }
+                
+            },
+
+            cellDBLClickEvent({row, column}){
+
+                var tbl={};
+                let strike = row.strikePrice;
+                let CEPE = column.property.slice(0,2);
+                let gap = Number(column.title.slice(1));
+                
+                let [BFType, gapAttr] = column.property.split('.');
+                let bRate = row[BFType][gapAttr];
+
+                //console.log(row, column);
+                this.chosenBFTitle = [row.expiryDate,`${gap}G`,strike,BFType,`@ ${bRate} ^ ${this.chosenRatio}`].join(' ');
+                
+                let optionIdx = this.formatDate(row.expiryDate); 
+                let ratioFactor = this.ratios[this.chosenRatio];
+
+                if(CEPE == 'CE'){
+
+                    if(this.chosenRatio == 1.25){
+                        tbl[`4 BUY ${strike} ${row.expiryDate}`] = `${optionIdx}${strike}${CEPE}`;
+                        tbl[`5 SEL ${strike + gap} ${row.expiryDate}`] = `${optionIdx}${strike + gap}${CEPE}`;    
+                    }
+                    if(this.chosenRatio == 1.33){
+                        tbl[`3 BUY ${strike} ${row.expiryDate}`] = `${optionIdx}${strike}${CEPE}`;
+                        tbl[`4 SEL ${strike + gap} ${row.expiryDate}`] = `${optionIdx}${strike + gap}${CEPE}`;    
+                    }
+                    if(this.chosenRatio == 1.5){
+                        tbl[`2 BUY ${strike} ${row.expiryDate}`] = `${optionIdx}${strike}${CEPE}`;
+                        tbl[`3 SEL ${strike + gap} ${row.expiryDate}`] = `${optionIdx}${strike + gap}${CEPE}`;    
+                    }
+                    if(this.chosenRatio == 2){
+                        tbl[`1 BUY ${strike} ${row.expiryDate}`] = `${optionIdx}${strike}${CEPE}`;
+                        tbl[`2 SEL ${strike + gap} ${row.expiryDate}`] = `${optionIdx}${strike + gap}${CEPE}`;    
+                    }
+
+                    if(this.chosenRatio == '1111'){
+                        tbl[`1 BUY ${strike} ${row.expiryDate}`] = `${optionIdx}${strike}${CEPE}`;
+                        tbl[`1 SEL ${strike + gap} ${row.expiryDate}`] = `${optionIdx}${strike + gap}${CEPE}`;    
+                        tbl[`1 SEL ${strike + gap * 2} ${row.expiryDate}`] = `${optionIdx}${strike + gap * 2}${CEPE}`;    
+                    }
+
+                    if(this.chosenRatio == '11011'){
+                        tbl[`1 BUY ${strike} ${row.expiryDate}`] = `${optionIdx}${strike}${CEPE}`;
+                        tbl[`1 SEL ${strike + gap} ${row.expiryDate}`] = `${optionIdx}${strike + gap}${CEPE}`;    
+                        tbl[`1 SEL ${strike + gap * 3} ${row.expiryDate}`] = `${optionIdx}${strike + gap * 3}${CEPE}`;    
+                    }
+
+                    if(this.chosenRatio == '132'){
+                        tbl[`1 BUY ${strike} ${row.expiryDate}`] = `${optionIdx}${strike}${CEPE}`;
+                        tbl[`3 SEL ${strike + gap} ${row.expiryDate}`] = `${optionIdx}${strike + gap}${CEPE}`;    
+                    }
+
+                    // For hedging leg
+                    let nearExpiryDate = expiryDates[0];
+                    optionIdx = this.formatDate(nearExpiryDate); 
+                    if(this.chosenRatio == '1111'){
+                        
+                        tbl[`1 BUY ${strike + gap * 3} ${nearExpiryDate}`] = `${optionIdx}${strike + gap * 3}${CEPE}`;
+
+                    }else if(this.chosenRatio == '11011'){
+                        
+                        tbl[`1 BUY ${strike + gap * 4} ${nearExpiryDate}`] = `${optionIdx}${strike + gap * 4}${CEPE}`;
+
+                    }else if(this.chosenRatio == '132'){
+                        
+                        tbl[`2 BUY ${strike + gap * 2} ${nearExpiryDate}`] = `${optionIdx}${strike + gap * 2}${CEPE}`;
+
+                    }else{
+
+                        tbl[`1 BUY ${strike + gap * (2 + ratioFactor - 1)} ${nearExpiryDate}`] = `${optionIdx}${strike + gap * (2 + ratioFactor - 1)}${CEPE}`;    
+                    }
+
+                    // Morph to have prices
+                    this.morphWitPrices(tbl, 'CE');
+
+                    console.table(tbl);
+                    
+                }
+
+                if(CEPE == 'PE'){
+
+                    if(this.chosenRatio == 1.25){
+                        tbl[`4 BUY ${strike} ${row.expiryDate}`] = `${optionIdx}${strike}${CEPE}`;
+                        tbl[`5 SEL ${strike - gap} ${row.expiryDate}`] = `${optionIdx} ${strike - gap}${CEPE}`;    
+                    }
+                    if(this.chosenRatio == 1.33){
+                        tbl[`3 BUY ${strike} ${row.expiryDate}`] = `${optionIdx}${strike}${CEPE}`;
+                        tbl[`4 SEL ${strike - gap} ${row.expiryDate}`] = `${optionIdx}${strike - gap}${CEPE}`;    
+                    }
+                    if(this.chosenRatio == 1.5){
+                        tbl[`2 BUY ${strike} ${row.expiryDate}`] = `${optionIdx}${strike}${CEPE}`;
+                        tbl[`3 SEL ${strike - gap} ${row.expiryDate}`] = `${optionIdx}${strike - gap}${CEPE}`;    
+                    }
+
+                    if(this.chosenRatio == 2){
+                        tbl[`1 BUY ${strike} ${row.expiryDate}`] = `${optionIdx}${strike}${CEPE}`;
+                        tbl[`2 SEL ${strike - gap} ${row.expiryDate}`] = `${optionIdx}${strike - gap}${CEPE}`;    
+                    }
+
+                    if(this.chosenRatio == '1111'){
+                        tbl[`1 BUY ${strike} ${row.expiryDate}`] = `${optionIdx} ${strike} ${CEPE}`;
+                        tbl[`1 SEL ${strike - gap} ${row.expiryDate}`] = `${optionIdx}${strike - gap}${CEPE}`;    
+                        tbl[`1 SEL ${strike - gap * 2} ${row.expiryDate}`] = `${optionIdx}${strike - gap * 2}${CEPE}`;    
+                    }
+
+                    if(this.chosenRatio == '11011'){
+                        tbl[`1 BUY ${strike} ${row.expiryDate}`] = `${optionIdx} ${strike} ${CEPE}`;
+                        tbl[`1 SEL ${strike - gap} ${row.expiryDate}`] = `${optionIdx}${strike - gap}${CEPE}`;    
+                        tbl[`1 SEL ${strike - gap * 3} ${row.expiryDate}`] = `${optionIdx}${strike - gap * 3}${CEPE}`;    
+                    }
+
+                    if(this.chosenRatio == '132'){
+                        tbl[`1 BUY ${strike} ${row.expiryDate}`] = `${optionIdx}${strike}${CEPE}`;
+                        tbl[`3 SEL ${strike - gap} ${row.expiryDate}`] = `${optionIdx}${strike - gap}${CEPE}`;    
+                    }
+
+                    // For hedging leg
+                    let nearExpiryDate = expiryDates[0];
+                    optionIdx = this.formatDate(nearExpiryDate); 
+                    if(this.chosenRatio == '1111'){
+
+                        tbl[`1 BUY ${strike - gap * 3} ${nearExpiryDate}`] = `${optionIdx}${strike - gap * 3}${CEPE}`;
+
+                    }else if(this.chosenRatio == '11011'){
+
+                        tbl[`1 BUY ${strike - gap * 4} ${nearExpiryDate}`] = `${optionIdx}${strike - gap * 4}${CEPE}`;
+
+                    }else if(this.chosenRatio == '132'){
+                        
+                        tbl[`2 BUY ${strike - gap * 2} ${nearExpiryDate}`] = `${optionIdx}${strike - gap * 2}${CEPE}`;
+
+                    }else{
+
+                        tbl[`1 BUY ${strike - gap * (2 + ratioFactor - 1)} ${nearExpiryDate}`] = `${optionIdx}${strike - gap * (2 + ratioFactor - 1)}${CEPE}`;    
+                    }
+
+                    // Morph to have prices
+                    this.morphWitPrices(tbl, 'PE');
+                    
+                    console.table(tbl);
+                    
+                }
+
+
+                this.showLegs = true;
+                this.chosenBF = tbl;
+                
+                
+                
+            },
+
+            rowClassName({row}){
+
+                return row.isATM ? 'atm' : '';
+            },
+
+            isOptimalFLP(FLPRate, CEPE){
+
+                return FLPRate > 0 && FLPRate <= 25 && (CEPE.askPrice + CEPE.bidprice) >= 15;
+            },
+
+            calcMEBFRate(strike, gap, CEPE){
+
+                try{
+
+                    let ratioFactor = this.ratios[this.chosenRatio];
+
+                    // For hedging leg
+                    let nearExpiryDate = expiryDates[0];
+                    let CLegData = this.allExpiryOCData.filter(c => c.expiryDate == nearExpiryDate);
+
+                    let A = this.ocDataInterested.find(opc => opc.strikePrice == strike)[CEPE].askPrice;
+                    let B,C;
+                    if(CEPE == 'CE'){
+                        B = this.ocDataInterested.find(opc => opc.strikePrice == strike + gap)[CEPE].bidprice;
+                        C = CLegData.find(opc => opc.strikePrice == strike + gap * (2 + ratioFactor - 1) )[CEPE].askPrice;
+                    }
+
+                    if(CEPE == 'PE'){
+                        B = this.ocDataInterested.find(opc => opc.strikePrice == strike - gap)[CEPE].bidprice;
+                        C = CLegData.find(opc => opc.strikePrice == strike - gap * (2 + ratioFactor - 1) )[CEPE].askPrice;
+                    }
+
+                    
+                    let singleLastLeg = C / ratioFactor;
+
+                    // return Number(A - this.chosenRatio * B).toFixed();
+                    return Number(A - this.chosenRatio * B + singleLastLeg ).toFixed(1);
+                } catch(Exception) {
+                    return 0
+                }
+            },
+
+            calcLCMEBFRate(strike, gap, CEPE){
+
+                try{
+
+                    // For hedging leg
+                    let nearExpiryDate = expiryDates[0];
+                    let DLegData = this.allExpiryOCData.filter(c => c.expiryDate == nearExpiryDate);
+
+                    let A = this.ocDataInterested.find(opc => opc.strikePrice == strike)[CEPE].askPrice;
+                    let B,C;
+                    if(CEPE == 'CE'){
+                        B = this.ocDataInterested.find(opc => opc.strikePrice == strike + gap)[CEPE].bidprice;
+                        C = this.ocDataInterested.find(opc => opc.strikePrice == strike + gap * 2)[CEPE].bidprice;
+                        D = DLegData.find(opc => opc.strikePrice == strike + gap * 3 )[CEPE].askPrice;
+                        
+                    }
+
+                    if(CEPE == 'PE'){
+                        B = this.ocDataInterested.find(opc => opc.strikePrice == strike - gap)[CEPE].bidprice;
+                        C = this.ocDataInterested.find(opc => opc.strikePrice == strike - gap * 2)[CEPE].bidprice;
+                        D = DLegData.find(opc => opc.strikePrice == strike - gap * 3 )[CEPE].askPrice;
+                    }
+
+                    return Number(A - B - C + D).toFixed(1);
+                } catch(Exception) {
+                    return 0
+                }
+            },
+
+            calcLC3XMEBFRate(strike, gap, CEPE){
+
+                try{
+
+                    // For hedging leg
+                    let nearExpiryDate = expiryDates[0];
+                    let DLegData = this.allExpiryOCData.filter(c => c.expiryDate == nearExpiryDate);
+
+                    let A = this.ocDataInterested.find(opc => opc.strikePrice == strike)[CEPE].askPrice;
+                    let B,C;
+                    if(CEPE == 'CE'){
+                        B = this.ocDataInterested.find(opc => opc.strikePrice == strike + gap)[CEPE].bidprice;
+                        C = this.ocDataInterested.find(opc => opc.strikePrice == strike + gap * 3)[CEPE].bidprice;
+                        D = DLegData.find(opc => opc.strikePrice == strike + gap * 4 )[CEPE].askPrice;
+                        
+                    }
+
+                    if(CEPE == 'PE'){
+                        B = this.ocDataInterested.find(opc => opc.strikePrice == strike - gap)[CEPE].bidprice;
+                        C = this.ocDataInterested.find(opc => opc.strikePrice == strike - gap * 3)[CEPE].bidprice;
+                        D = DLegData.find(opc => opc.strikePrice == strike - gap * 4 )[CEPE].askPrice;
+                    }
+
+                    return Number(A - B - C + D).toFixed(1);
+                } catch(Exception) {
+                    return 0
+                }
+            },
+
+            calcRBRMEBFRate(strike, gap, CEPE){
+
+                try{
+
+                    // For hedging leg
+                    let nearExpiryDate = expiryDates[0];
+                    let CLegData = this.allExpiryOCData.filter(c => c.expiryDate == nearExpiryDate);
+
+                    let A = this.ocDataInterested.find(opc => opc.strikePrice == strike)[CEPE].askPrice;
+                    let B,C;
+                    if(CEPE == 'CE'){
+                        B = this.ocDataInterested.find(opc => opc.strikePrice == strike + gap)[CEPE].bidprice;
+                        C = CLegData.find(opc => opc.strikePrice == strike + gap * 2 )[CEPE].askPrice;
+                        
+                    }
+
+                    if(CEPE == 'PE'){
+                        B = this.ocDataInterested.find(opc => opc.strikePrice == strike - gap)[CEPE].bidprice;
+                        C = CLegData.find(opc => opc.strikePrice == strike - gap * 2 )[CEPE].askPrice;
+                    }
+
+                    return Number(A - 3 * B + C * 2).toFixed(1);
+                } catch(Exception) {
+                    return 0
+                }
+            },
+
+        },
+
+        created(){
+            fetch('/chain').then(resp => {
+                if (resp.status != 200) throw new Error('something went wrong');
+                return resp.json();
+            })
+            .then(data => {
+                
+                localStorage.setItem('ocData', JSON.stringify(data.records.data));
+
+                this.ocData = data;
+                this.ocLastFetched = data.records.timestamp;
+                this.underlyingValue = data.records.underlyingValue;
+
+                window.expiryDates = data.records.expiryDates;
+                let expiryNames = expiryDates.map(d => d.slice(3));
+                window.expiryMnths = expiryDates.filter((d, idx)=> expiryNames.lastIndexOf(d.slice(3)) == idx).slice(0,2);
+
+                let nearExpiryDates = expiryDates.filter(d => (Date.parse(d) - Date.now())/(1000*60*60*24*7) <= 3);
+                /*
+                this.expiryDateOptions = data.records.expiryDates.filter(d=>{
+                    return ((Date.parse(d) - Date.now())/(1000*60*60*24*7) < 2) ||
+                            (new Date().getYear() == new Date(d).getYear() && new Date(d).getDate() > 24 && new Date(d).getMonth() <= 3)
+                })
+                */
+
+                nearExpiryDates.push(...expiryMnths);
+                this.expiryDateOptions = Array.from(new Set(nearExpiryDates));
+
+                if(!this.commonColumns.expiryDate || !this.expiryDateOptions.includes(this.commonColumns.expiryDate)){
+                    this.commonColumns.expiryDate = this.expiryDateOptions[0]    
+                }
+                
+            })
+            .catch(err => {
+                document.getElementById('content').innerHTML = "Error Occured: " + err.toString();
+                reject('error');
+            })
+        }
+    })
+</script>
+</body>
+</html>
